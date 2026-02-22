@@ -122,6 +122,10 @@ class BOPCornerDataset(Dataset):
         # 提取角点坐标 (假设keypoints字段存在)
         corners = []
         for ann in anns:
+            # 跳过被忽略的标注
+            if ann.get('ignore', False):
+                continue
+
             if 'keypoints' in ann:
                 # keypoints格式: [x1,y1,v1, x2,y2,v2, ...]
                 keypoints = ann['keypoints']
@@ -136,6 +140,10 @@ class BOPCornerDataset(Dataset):
         # 如果没有keypoints，尝试从bbox计算角点
         if not corners and anns:
             for ann in anns:
+                # 跳过被忽略的标注
+                if ann.get('ignore', False):
+                    continue
+
                 if 'bbox' in ann:
                     x, y, w, h = ann['bbox']
                     # 计算bbox的四个角点

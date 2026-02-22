@@ -27,8 +27,9 @@ def load_model(model_path):
     """加载训练好的模型"""
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # 创建模型
-    model = CornerDetectionModel()
+    # 创建模型（使用训练时的图像尺寸 256x256）
+    H, W = 256, 256
+    model = CornerDetectionModel(H, W)
     model = model.to(device)
 
     # 加载权重

@@ -58,8 +58,11 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
         axes = [axes]
 
     for i in range(min(num_samples, len(dataset))):
-        # 获取数据
-        image, heatmap_gt, corners_gt = dataset[i]
+        # 获取数据 (现在返回字典)
+        data_dict = dataset[i]
+        image = data_dict['image']
+        heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()  # 移除通道维度
+        corners_gt = data_dict['corners']
 
         # 模型推理
         with torch.no_grad():

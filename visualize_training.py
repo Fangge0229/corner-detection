@@ -16,6 +16,7 @@ import sys
 import argparse
 import json
 from pathlib import Path
+from torchvision import transforms
 
 # 添加当前目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -70,8 +71,13 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
             heatmap_pred = model(image_input)
             heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).squeeze(0).cpu().numpy()
 
-        # 转换为numpy数组用于显示
+        # 转换为numpy数组用于显示 (反标准化)
+        # 反标准化: image = image * std + mean
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
         image_np = image.permute(1, 2, 0).numpy()
+        image_np = image_np * std + mean  # 反标准化
+        image_np = np.clip(image_np, 0, 1)  # 确保在[0,1]范围内
         image_np = (image_np * 255).astype(np.uint8)
 
         # 找到预测的角点（heatmap中的局部最大值）
@@ -172,7 +178,15 @@ def main():
 
     # 创建数据集
     try:
-        dataset = BOPCornerDataset(args.scene_dir)
+        # 设置与训练相同的transform
+        transform = transforms.Compose([
+            transforms.Resize((256, 256)),  # 从640x480 resize到256x256
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                               std=[0.229, 0.224, 0.225])
+        ])
+
+        dataset = BOPCornerDataset(args.scene_dir, transform=transform)
         print(f"数据集大小: {len(dataset)} 样本")
         print()
     except Exception as e:

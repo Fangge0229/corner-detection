@@ -19,7 +19,12 @@ python3 validate_ubuntu.py
 
 ### 可视化训练效果
 
+> **注意**: 可视化脚本需要在安装了PyTorch等依赖的环境中运行，建议在Ubuntu系统上执行。
+
 ```bash
+# 安装可视化依赖
+pip install matplotlib opencv-python
+
 # 可视化训练数据上的预测效果
 python3 visualize_training.py --scene_dir "/path/to/training/data" --num_samples 5
 

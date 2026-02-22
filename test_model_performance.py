@@ -17,7 +17,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-dataset = BOPCornerDataset('/Users/qianqian/Desktop/corner-detection/demo-bin-picking/train_pbr/000000', transform=transform)
+dataset = BOPCornerDataset('/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000', transform=transform)
 
 # 测试有效样本
 valid_indices = [10, 11, 12, 13, 14]

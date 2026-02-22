@@ -63,11 +63,12 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
         data_dict = dataset[i]
         image = data_dict['image']
         heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()  # 移除通道维度
-        corners_gt = data_dict['corners']
+        
+        # 从热图估算角点数量（高于0.5的像素数）
+        gt_heatmap_binary = (heatmap_gt > 0.5).astype(np.uint8)
+        num_gt_corners = len(extract_corners_from_heatmap(heatmap_gt, threshold=0.5))
 
-        print(f"样本 {i+1}: 角点数量 = {len(corners_gt)}")
-        if len(corners_gt) > 0:
-            print(f"  角点坐标: {corners_gt[:5] if len(corners_gt) > 5 else corners_gt}")  # 显示前5个角点
+        print(f"样本 {i+1}: Ground Truth有效像素数 = {(heatmap_gt > 0.1).sum()}, 估算角点 ≈ {num_gt_corners}")
 
         # 模型推理
         with torch.no_grad():
@@ -95,14 +96,9 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
         row[0].set_title(f'原始图像 {i+1}')
         row[0].axis('off')
 
-        # Ground Truth角点
-        gt_image = image_np.copy()
-        if len(corners_gt) > 0:
-            for corner in corners_gt:
-                x, y = corner
-                cv2.circle(gt_image, (int(x), int(y)), 3, (0, 255, 0), -1)  # 绿色圆圈
-        row[1].imshow(gt_image)
-        row[1].set_title(f'Ground Truth角点 ({len(corners_gt)}个)')
+        # Ground Truth热图
+        row[1].imshow(heatmap_gt, cmap='hot')
+        row[1].set_title(f'Ground Truth热图')
         row[1].axis('off')
 
         # 预测角点
@@ -114,10 +110,8 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
         row[2].imshow(pred_image)
         row[2].set_title(f'预测角点 ({len(pred_corners)}个)')
         row[2].axis('off')
-
-        # 打印统计信息
         print(f"样本 {i+1}:")
-        print(f"  Ground Truth角点: {len(corners_gt)}")
+        print(f"  Ground Truth估算角点: ≈ {num_gt_corners}")
         print(f"  预测角点: {len(pred_corners)}")
         print(f"  图像尺寸: {image_np.shape}")
         print()
@@ -157,8 +151,9 @@ def main():
                        default='/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000',
                        help='训练数据目录路径')
     parser.add_argument('--model_path', type=str,
-                       default='./corner_detection_model.pth',
+                       default='./corner_detection_model_retrained.pth',
                        help='模型权重文件路径')
+
     parser.add_argument('--num_samples', type=int, default=5,
                        help='可视化的样本数量')
     parser.add_argument('--save_dir', type=str, default=None,

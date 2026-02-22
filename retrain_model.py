@@ -25,7 +25,7 @@ def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
 
     # 加载数据集
     train_dataset = BOPCornerDataset(
-        '/Users/qianqian/Desktop/corner-detection/demo-bin-picking/train_pbr/000000',
+        '/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000',
         transform=transform
     )
 

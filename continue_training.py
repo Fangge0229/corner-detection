@@ -23,7 +23,7 @@ def continue_training(checkpoint_path, num_epochs=100, batch_size=8, learning_ra
 
     # 加载数据集
     train_dataset = BOPCornerDataset(
-        '/Users/qianqian/Desktop/corner-detection/demo-bin-picking/train_pbr/000000',
+        '/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000',
         transform=transform
     )
 

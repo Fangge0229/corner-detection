@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 """
-训练数据效果可视化脚本
-加载训练好的模型，在训练数据上运行推理并可视化结果
+训练数据可视化脚本
+显示原图像、Ground Truth热图以及模型预测热图
+只显示 heatmap 不为零的有效样本
 """
 
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
-from PIL import Image
 import os
 import sys
 import argparse
-import json
-from pathlib import Path
 from torchvision import transforms
 
 # 添加当前目录到Python路径
@@ -24,51 +19,72 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from corner_detection import CornerDetectionModel
 from train_loader_bop import BOPCornerDataset
 
-def load_model(model_path):
+def load_model(model_path, device):
     """加载训练好的模型"""
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    # 创建模型（使用训练时的图像尺寸 256x256）
     H, W = 256, 256
     model = CornerDetectionModel(H, W)
     model = model.to(device)
 
-    # 加载权重
     if os.path.exists(model_path):
         checkpoint = torch.load(model_path, map_location=device)
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
             model.load_state_dict(checkpoint['model_state_dict'])
         else:
             model.load_state_dict(checkpoint)
-        print(f"成功加载模型: {model_path}")
+        print(f"✓ 成功加载模型: {model_path}")
     else:
-        print(f"警告: 模型文件不存在: {model_path}")
-        print("将使用随机初始化的模型进行演示")
+        print(f"⚠ 模型文件不存在: {model_path}")
+        return None
 
     model.eval()
-    return model, device
+    return model
 
-def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
-    """可视化模型预测结果"""
-
+def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
+    """
+    可视化原图像和热图
+    三列显示：原图像 | Ground Truth热图 | 预测热图
+    只显示 heatmap 不为零的样本
+    """
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
 
-    fig, axes = plt.subplots(num_samples, 3, figsize=(15, 5*num_samples))
-    if num_samples == 1:
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+
+    # 收集有效样本
+    valid_samples = []
+    print("正在扫描数据集，寻找有效样本...")
+    
+    for idx in range(len(dataset)):
+        data_dict = dataset[idx]
+        heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()
+        
+        if heatmap_gt.max() > 0:
+            valid_samples.append(idx)
+            if len(valid_samples) >= num_samples:
+                break
+    
+    print(f"✓ 找到 {len(valid_samples)} 个有效样本\n")
+    
+    if len(valid_samples) == 0:
+        print("错误：没有找到有效样本（heatmap 不为零）")
+        return
+
+    # 创建图表
+    fig, axes = plt.subplots(len(valid_samples), 3, figsize=(15, 5*len(valid_samples)))
+    if len(valid_samples) == 1:
         axes = [axes]
 
-    for i in range(min(num_samples, len(dataset))):
-        # 获取数据 (现在返回字典)
-        data_dict = dataset[i]
+    for row_idx, sample_idx in enumerate(valid_samples):
+        data_dict = dataset[sample_idx]
         image = data_dict['image']
-        heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()  # 移除通道维度
-        
-        # 从热图估算角点数量（高于0.5的像素数）
-        gt_heatmap_binary = (heatmap_gt > 0.5).astype(np.uint8)
-        num_gt_corners = len(extract_corners_from_heatmap(heatmap_gt, threshold=0.5))
+        heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()
 
-        print(f"样本 {i+1}: Ground Truth有效像素数 = {(heatmap_gt > 0.1).sum()}, 估算角点 ≈ {num_gt_corners}")
+        # 反标准化图像
+        image_np = image.permute(1, 2, 0).numpy()
+        image_np = image_np * std + mean
+        image_np = np.clip(image_np, 0, 1)
+        image_np = (image_np * 255).astype(np.uint8)
 
         # 模型推理
         with torch.no_grad():
@@ -76,124 +92,97 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
             heatmap_pred = model(image_input)
             heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).squeeze(0).cpu().numpy()
 
-        # 转换为numpy数组用于显示 (反标准化)
-        # 反标准化: image = image * std + mean
-        mean = np.array([0.485, 0.456, 0.406])
-        std = np.array([0.229, 0.224, 0.225])
-        image_np = image.permute(1, 2, 0).numpy()
-        image_np = image_np * std + mean  # 反标准化
-        image_np = np.clip(image_np, 0, 1)  # 确保在[0,1]范围内
-        image_np = (image_np * 255).astype(np.uint8)
+        row = axes[row_idx]
 
-        # 找到预测的角点（heatmap中的局部最大值）
-        pred_corners = extract_corners_from_heatmap(heatmap_pred, threshold=0.5)
-
-        # 显示结果
-        row = axes[i]
-
-        # 原始图像
-        row[0].imshow(image_np)
-        row[0].set_title(f'原始图像 {i+1}')
+        # 列1：原始图像
+        row[0].imshow(image_np, cmap='gray')
+        row[0].set_title(f'原始图像 (样本 {sample_idx})', fontsize=12, fontweight='bold')
         row[0].axis('off')
 
-        # Ground Truth热图
-        row[1].imshow(heatmap_gt, cmap='hot')
-        row[1].set_title(f'Ground Truth热图')
+        # 列2：Ground Truth 热图
+        im1 = row[1].imshow(heatmap_gt, cmap='hot', vmin=0, vmax=1)
+        row[1].set_title(f'Ground Truth 热图\n(Max: {heatmap_gt.max():.4f})', 
+                         fontsize=12, fontweight='bold')
         row[1].axis('off')
+        plt.colorbar(im1, ax=row[1], fraction=0.046, pad=0.04)
 
-        # 预测角点
-        pred_image = image_np.copy()
-        if len(pred_corners) > 0:
-            for corner in pred_corners:
-                x, y = corner
-                cv2.circle(pred_image, (int(x), int(y)), 3, (255, 0, 0), -1)  # 蓝色圆圈
-        row[2].imshow(pred_image)
-        row[2].set_title(f'预测角点 ({len(pred_corners)}个)')
+        # 列3：预测热图
+        im2 = row[2].imshow(heatmap_pred, cmap='hot', vmin=0, vmax=1)
+        row[2].set_title(f'预测热图\n(Max: {heatmap_pred.max():.4f})', 
+                         fontsize=12, fontweight='bold')
         row[2].axis('off')
-        print(f"样本 {i+1}:")
-        print(f"  Ground Truth估算角点: ≈ {num_gt_corners}")
-        print(f"  预测角点: {len(pred_corners)}")
-        print(f"  图像尺寸: {image_np.shape}")
+        plt.colorbar(im2, ax=row[2], fraction=0.046, pad=0.04)
+
+        # 统计信息
+        gt_sum = heatmap_gt.sum()
+        pred_sum = heatmap_pred.sum()
+        print(f"样本 {sample_idx}:")
+        print(f"  GT热图：最大值={heatmap_gt.max():.4f}, 总和={gt_sum:.2f}, 非零像素={np.count_nonzero(heatmap_gt > 0.1)}")
+        print(f"  预测：最大值={heatmap_pred.max():.4f}, 总和={pred_sum:.2f}, 非零像素={np.count_nonzero(heatmap_pred > 0.1)}")
         print()
 
     plt.tight_layout()
 
     if save_dir:
-        save_path = os.path.join(save_dir, 'training_data_visualization.png')
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"可视化结果已保存到: {save_path}")
+        save_path = os.path.join(save_dir, 'heatmap_visualization.png')
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"✓ 可视化结果已保存到: {save_path}")
 
     plt.show()
 
-def extract_corners_from_heatmap(heatmap, threshold=0.5, min_distance=10):
-    """从heatmap中提取角点坐标"""
-    # 应用阈值
-    heatmap_binary = (heatmap > threshold).astype(np.uint8)
-
-    # 找到局部最大值
-    corners = []
-    h, w = heatmap.shape
-
-    for y in range(min_distance, h - min_distance):
-        for x in range(min_distance, w - min_distance):
-            if heatmap_binary[y, x] == 1:
-                # 检查是否是局部最大值
-                local_region = heatmap[y-min_distance:y+min_distance+1,
-                                      x-min_distance:x+min_distance+1]
-                if heatmap[y, x] == np.max(local_region):
-                    corners.append((x, y))
-
-    return corners
-
 def main():
-    parser = argparse.ArgumentParser(description='训练数据效果可视化')
+    parser = argparse.ArgumentParser(description='训练数据热图可视化')
     parser.add_argument('--scene_dir', type=str,
                        default='/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000',
                        help='训练数据目录路径')
     parser.add_argument('--model_path', type=str,
                        default='./corner_detection_model_retrained.pth',
                        help='模型权重文件路径')
-
     parser.add_argument('--num_samples', type=int, default=5,
-                       help='可视化的样本数量')
+                       help='可视化的有效样本数量')
     parser.add_argument('--save_dir', type=str, default=None,
                        help='保存可视化结果的目录')
 
     args = parser.parse_args()
 
-    print("=== 训练数据效果可视化 ===")
+    print("=" * 60)
+    print("训练数据热图可视化")
+    print("=" * 60)
     print(f"数据目录: {args.scene_dir}")
     print(f"模型路径: {args.model_path}")
     print(f"样本数量: {args.num_samples}")
     print()
 
-    # 检查数据目录
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"使用设备: {device}\n")
+
     if not os.path.exists(args.scene_dir):
-        print(f"错误: 数据目录不存在: {args.scene_dir}")
+        print(f"❌ 错误: 数据目录不存在: {args.scene_dir}")
         return
 
-    # 加载模型
-    model, device = load_model(args.model_path)
+    model = load_model(args.model_path, device)
+    if model is None:
+        return
 
-    # 创建数据集
     try:
-        # 设置与训练相同的transform
         transform = transforms.Compose([
-            transforms.Resize((256, 256)),  # 从640x480 resize到256x256
+            transforms.Resize((256, 256)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                std=[0.229, 0.224, 0.225])
         ])
 
         dataset = BOPCornerDataset(args.scene_dir, transform=transform)
-        print(f"数据集大小: {len(dataset)} 样本")
-        print()
+        print(f"✓ 数据集大小: {len(dataset)} 样本\n")
     except Exception as e:
-        print(f"错误: 无法创建数据集: {e}")
+        print(f"❌ 错误: 无法创建数据集: {e}")
         return
 
-    # 可视化预测结果
-    visualize_predictions(model, device, dataset, args.num_samples, args.save_dir)
+    visualize_heatmaps(model, device, dataset, args.num_samples, args.save_dir)
+    
+    print("=" * 60)
+    print("可视化完成！")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()

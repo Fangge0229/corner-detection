@@ -1,6 +1,6 @@
 # Corner Detection Model
 
-角点检测模型训练项目，支持BOP数据集格式。专为Ubuntu 18.04环境优化，支持16-bit灰度PNG图像。
+角点检测模型训练项目，支持BOP数据集格式。专为Ubuntu 18.04环境优化，支持16-bit灰度图像（PNG/JPG格式）。
 
 ## 🚀 快速开始
 
@@ -50,6 +50,9 @@ python3 debug_coco.py "/path/to/scene/dir"
 ├── debug_coco.py                # COCO标注文件调试脚本
 ├── train_loader_bop.py          # BOP数据集加载器
 ├── train_loader_bop_usage.py    # BOP loader使用指南
+├── test_corner_extraction.py    # 角点提取逻辑测试脚本
+├── test_modified_extraction.py  # 修改后角点提取验证脚本
+├── test_jpg_support.py          # JPG格式支持测试脚本
 └── README.md                    # 本文档
 ```
 
@@ -85,9 +88,10 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 ## 📊 数据格式
 
 ### 支持的图像格式
-- **格式**: 16-bit灰度PNG / 8-bit灰度PNG / RGB PNG
+- **格式**: 16-bit灰度PNG/JPG / 8-bit灰度PNG/JPG / RGB PNG/JPG
 - **尺寸**: 任意尺寸（自动调整为256x256）
 - **示例**: `000000.png: PNG image data, 640 x 480, 16-bit grayscale`
+- **示例**: `000000.jpg: JPEG image data, JFIF standard 1.01, 640 x 480`
 
 ### BOP数据集结构
 ```

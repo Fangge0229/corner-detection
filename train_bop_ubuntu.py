@@ -98,7 +98,7 @@ class BOPCornerDataset(torch.utils.data.Dataset):
         if not os.path.exists(img_path):
             raise FileNotFoundError(f"图像文件不存在: {img_path}")
 
-        # 处理16-bit PNG图像
+        # 处理16-bit图像（PNG/JPG等格式）
         image = Image.open(img_path)
 
         # 如果是16-bit灰度图，转换为8-bit并复制到3通道

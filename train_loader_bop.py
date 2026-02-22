@@ -91,7 +91,7 @@ class BOPCornerDataset(Dataset):
         rgb_dir = os.path.join(self.scene_dir, 'rgb')
         img_path = os.path.join(rgb_dir, img_filename)
         
-        # 处理16-bit PNG图像
+        # 处理16-bit图像（PNG/JPG等格式）
         image = Image.open(img_path)
         
         # 如果是16-bit灰度图，转换为8-bit并复制到3通道

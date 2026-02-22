@@ -17,23 +17,15 @@ python3 validate_ubuntu.py
 ./train_ubuntu.sh --epochs 200 --batch_size 16 --lr 0.0001
 ```
 
-### 可视化训练效果
+### 调试数据标注
 
-> **注意**: 可视化脚本需要在安装了PyTorch等依赖的环境中运行，建议在Ubuntu系统上执行。
+如果可视化结果显示角点数量为0，可能是数据标注问题：
 
 ```bash
-# 安装可视化依赖
-pip install matplotlib opencv-python
+# 调试COCO标注文件
+python3 debug_coco.py "/path/to/scene/dir"
 
-# 可视化训练数据上的预测效果
-python3 visualize_training.py --scene_dir "/path/to/training/data" --num_samples 5
-
-# 指定模型路径和保存结果
-python3 visualize_training.py \
-    --scene_dir "/path/to/training/data" \
-    --model_path "./corner_detection_model.pth" \
-    --num_samples 10 \
-    --save_dir "./visualization_results"
+# 检查输出中的keypoints和bbox信息
 ```
 
 ## 📁 项目结构
@@ -45,6 +37,7 @@ python3 visualize_training.py \
 ├── train_ubuntu.sh              # 自动化训练脚本
 ├── validate_ubuntu.py           # 环境验证工具
 ├── visualize_training.py        # 训练数据效果可视化脚本
+├── debug_coco.py                # COCO标注文件调试脚本
 ├── train_loader_bop.py          # BOP数据集加载器
 ├── train_loader_bop_usage.py    # BOP loader使用指南
 └── README.md                    # 本文档

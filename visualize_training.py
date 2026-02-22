@@ -65,6 +65,10 @@ def visualize_predictions(model, device, dataset, num_samples=5, save_dir=None):
         heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()  # 移除通道维度
         corners_gt = data_dict['corners']
 
+        print(f"样本 {i+1}: 角点数量 = {len(corners_gt)}")
+        if len(corners_gt) > 0:
+            print(f"  角点坐标: {corners_gt[:5] if len(corners_gt) > 5 else corners_gt}")  # 显示前5个角点
+
         # 模型推理
         with torch.no_grad():
             image_input = image.unsqueeze(0).to(device)

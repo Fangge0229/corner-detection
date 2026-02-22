@@ -33,6 +33,11 @@ python3 debug_coco.py "/path/to/scene/dir"
 - 如果只有bbox没有keypoints，会从bbox的四个角计算角点
 - 确保 `scene_gt_coco.json` 文件格式正确
 
+**重要修复**：
+- **2024年修复**: 移除了对 `ignore` 字段的检查，假设所有标注都是有效的
+- 这解决了BOP数据集中所有标注被标记为 `ignore: True` 的问题
+- 如果您的数据集确实需要忽略某些标注，请手动恢复相关检查代码
+
 ## 📁 项目结构
 
 ```

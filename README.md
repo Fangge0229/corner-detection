@@ -28,6 +28,11 @@ python3 debug_coco.py "/path/to/scene/dir"
 # 检查输出中的keypoints和bbox信息
 ```
 
+**常见问题**：
+- 如果标注有 `ignore: True`，这些标注会被跳过
+- 如果只有bbox没有keypoints，会从bbox的四个角计算角点
+- 确保 `scene_gt_coco.json` 文件格式正确
+
 ## 📁 项目结构
 
 ```

@@ -11,7 +11,7 @@ from torchvision import transforms
 import os
 import time
 from corner_detection import CornerDetectionModel
-from train_loader_bop import BOPCornerDataset
+from train_loader_bop import BOPCornerDataset, collate_fn
 
 def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
     """训练模型"""
@@ -29,7 +29,7 @@ def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
         transform=transform
     )
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, collate_fn=collate_fn)
 
     # 创建模型
     model = CornerDetectionModel(256, 256)
@@ -55,8 +55,8 @@ def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
         batch_count = 0
 
         for batch_idx, batch in enumerate(train_loader):
-            images = batch['image'].to(device)
-            targets = batch['heatmap'].to(device)
+            images = batch['images'].to(device)
+            targets = batch['heatmaps'].to(device)
 
             # 前向传播
             optimizer.zero_grad()

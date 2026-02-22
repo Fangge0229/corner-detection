@@ -54,6 +54,8 @@ class BOPCornerDataset(Dataset):
         self.scene_dir = scene_dir
         self.transform = transform
         self.phase = phase
+        # 最大角点数量（用于填充以便批处理堆叠）
+        self.max_corners = 32
 
         # 加载COCO格式的标注
         coco_path = os.path.join(scene_dir, 'scene_gt_coco.json')
@@ -182,10 +184,20 @@ class BOPCornerDataset(Dataset):
         # 创建角点heatmap (使用模型输入尺寸256x256) —— 使用缩放后的角点
         heatmap = corners_to_heatmap(scaled_corners, target_h, target_w)
 
+        # 创建填充角点数组，便于在没有自定义 collate_fn 时安全堆叠
+        num_corners = scaled_corners.shape[0]
+        padded = np.zeros((self.max_corners, 2), dtype=np.float32)
+        if num_corners > 0:
+            # 截断或填充
+            take = min(num_corners, self.max_corners)
+            padded[:take, :] = scaled_corners[:take, :]
+
         return {
             'image': image,
             'heatmap': torch.from_numpy(heatmap).unsqueeze(0),  # 添加通道维度
-            'corners': scaled_corners,  # 缩放到模型输入大小，方便可视化
+            'corners': scaled_corners,  # 缩放到模型输入大小，方便可视化（变长）
+            'padded_corners': torch.from_numpy(padded),  # 固定形状，方便默认 collate
+            'num_corners': int(num_corners),
             'image_id': img_id,
             'image_path': img_path
         }
@@ -230,6 +242,8 @@ def collate_fn(batch):
     images = []
     heatmaps = []
     corners_list = []
+    padded_list = []
+    num_list = []
     image_ids = []
     image_paths = []
 
@@ -237,6 +251,8 @@ def collate_fn(batch):
         images.append(item['image'])
         heatmaps.append(item['heatmap'])
         corners_list.append(item['corners'])
+        padded_list.append(item.get('padded_corners'))
+        num_list.append(item.get('num_corners', 0))
         image_ids.append(item['image_id'])
         image_paths.append(item['image_path'])
 
@@ -244,6 +260,8 @@ def collate_fn(batch):
         'images': torch.stack(images),
         'heatmaps': torch.stack(heatmaps),
         'corners': corners_list,  # 保持为列表，因为长度不同
+        'padded_corners': torch.stack(padded_list),  # 固定形状 (B, max_corners, 2)
+        'num_corners': torch.tensor(num_list, dtype=torch.long),
         'image_ids': image_ids,
         'image_paths': image_paths
     }

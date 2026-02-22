@@ -17,7 +17,7 @@ python3 validate_ubuntu.py
 ./train_ubuntu.sh --epochs 200 --batch_size 16 --lr 0.0001
 ```
 
-·### 可视化训练效果
+### 可视化训练效果
 
 ```bash
 # 可视化训练数据上的预测效果
@@ -64,6 +64,9 @@ python3 visualize_training.py \
 ### 依赖包
 ```bash
 pip install torch torchvision pillow numpy
+
+# 可视化依赖（可选）
+pip install matplotlib opencv-python
 ```
 
 ### 可选依赖（GPU训练）
@@ -194,6 +197,32 @@ train_bop_model(
 - 学习率
 - 训练时间
 - 最佳模型保存提示
+
+### 6. 查看训练效果
+
+训练完成后，可以使用可视化脚本查看模型在训练数据上的表现：
+
+```bash
+# 安装可视化依赖
+pip install matplotlib opencv-python
+
+# 基本可视化（显示5个样本）
+python3 visualize_training.py --scene_dir "/path/to/training/data"
+
+# 高级可视化（指定模型和保存结果）
+python3 visualize_training.py \
+    --scene_dir "/path/to/training/data" \
+    --model_path "./corner_detection_model.pth" \
+    --num_samples 10 \
+    --save_dir "./visualization_results"
+```
+
+可视化结果将显示：
+- **左侧**: 原始训练图像
+- **中间**: Ground Truth角点（绿色圆圈）
+- **右侧**: 模型预测的角点（蓝色圆圈）
+
+每个子图标题会显示角点数量统计。
 
 示例输出：
 ```

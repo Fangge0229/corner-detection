@@ -154,23 +154,38 @@ class BOPCornerDataset(Dataset):
                         [x, y + h]       # 左下
                     ])
 
-        # 转换为numpy数组
+        # 转换为numpy数组 (原始图像坐标系)
         if corners:
             corners = np.array(corners, dtype=np.float32)
         else:
             # 如果没有角点，创建一个空的数组
             corners = np.array([], dtype=np.float32).reshape(0, 2)
 
-        # 数据增强和预处理
+        # 记录原始尺寸，用于对角点进行缩放
+        orig_w, orig_h = width, height
+
+        # 数据增强和预处理 (先对图像进行resize等变换)
         if self.transform:
             image = self.transform(image)
 
-        # 创建角点heatmap (使用模型输入尺寸256x256)
-        heatmap = corners_to_heatmap(corners, 256, 256)
+        # 将角点从原始图像尺寸缩放到模型输入尺寸 (256x256)
+        target_h, target_w = 256, 256
+        if corners.shape[0] > 0:
+            scale_x = float(target_w) / float(orig_w)
+            scale_y = float(target_h) / float(orig_h)
+            scaled_corners = corners.copy()
+            scaled_corners[:, 0] = scaled_corners[:, 0] * scale_x
+            scaled_corners[:, 1] = scaled_corners[:, 1] * scale_y
+        else:
+            scaled_corners = corners.copy()
+
+        # 创建角点heatmap (使用模型输入尺寸256x256) —— 使用缩放后的角点
+        heatmap = corners_to_heatmap(scaled_corners, target_h, target_w)
 
         return {
             'image': image,
             'heatmap': torch.from_numpy(heatmap).unsqueeze(0),  # 添加通道维度
+            'corners': scaled_corners,  # 缩放到模型输入大小，方便可视化
             'image_id': img_id,
             'image_path': img_path
         }

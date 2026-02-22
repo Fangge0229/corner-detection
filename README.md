@@ -17,18 +17,18 @@ python3 validate_ubuntu.py
 ./train_ubuntu.sh --epochs 200 --batch_size 16 --lr 0.0001
 ```
 
-### Python脚本训练
+·### 可视化训练效果
 
-```python
-from train_bop_ubuntu import train_bop_model
+```bash
+# 可视化训练数据上的预测效果
+python3 visualize_training.py --scene_dir "/path/to/training/data" --num_samples 5
 
-# 训练模型
-train_bop_model(
-    scene_dir="/path/to/bop/scene",
-    num_epochs=100,
-    batch_size=8,
-    learning_rate=1e-4
-)
+# 指定模型路径和保存结果
+python3 visualize_training.py \
+    --scene_dir "/path/to/training/data" \
+    --model_path "./corner_detection_model.pth" \
+    --num_samples 10 \
+    --save_dir "./visualization_results"
 ```
 
 ## 📁 项目结构
@@ -39,6 +39,7 @@ train_bop_model(
 ├── train_bop_ubuntu.py          # Ubuntu专用训练脚本
 ├── train_ubuntu.sh              # 自动化训练脚本
 ├── validate_ubuntu.py           # 环境验证工具
+├── visualize_training.py        # 训练数据效果可视化脚本
 ├── train_loader_bop.py          # BOP数据集加载器
 ├── train_loader_bop_usage.py    # BOP loader使用指南
 └── README.md                    # 本文档

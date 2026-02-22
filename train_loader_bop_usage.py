@@ -43,7 +43,7 @@ def example_basic_usage():
     print(f"使用设备: {device}")
 
     # 2. 数据集路径
-    scene_dir = "/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000/rgb"
+    scene_dir = "/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000"
 
     # 检查数据集是否存在
     if not os.path.exists(scene_dir):
@@ -83,7 +83,7 @@ def example_training():
     """训练示例"""
 
     # 数据集路径
-    scene_dir = "/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000/rgb"
+    scene_dir = "/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000"
 
     # 检查数据集是否存在
     if not os.path.exists(scene_dir):
@@ -109,7 +109,7 @@ def check_dataset():
 
     import json
 
-    scene_dir = "/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000/rgb"
+    scene_dir = "/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000"
 
     # 检查必要文件
     required_files = [

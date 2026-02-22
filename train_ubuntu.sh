@@ -15,7 +15,7 @@ else
 fi
 
 # 默认参数
-SCENE_DIR="/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000/rgb"
+SCENE_DIR="/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000"
 EPOCHS=100
 BATCH_SIZE=8
 LEARNING_RATE=0.0001

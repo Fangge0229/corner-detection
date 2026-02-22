@@ -95,16 +95,18 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 ### BOP数据集结构
 ```
-scene_dir/
+scene_dir/                  # <-- 这个目录路径作为 --scene_dir 参数
 ├── rgb/                    # RGB/灰度图像目录
-│   ├── 000000.png         # 16-bit灰度PNG (640x480)
+│   ├── 000000.png         # 16-bit灰度PNG/JPG (640x480)
 │   ├── 000001.png
 │   └── ...
 ├── scene_gt_coco.json      # COCO格式标注（必需）
-├── scene_camera.json       # 相机参数
-├── scene_gt.json          # ground truth poses
-└── scene_gt_info.json     # pose信息
+├── scene_camera.json       # 相机参数（可选）
+├── scene_gt.json          # ground truth poses（可选）
+└── scene_gt_info.json     # pose信息（可选）
 ```
+
+**重要**: `--scene_dir` 参数应该指向包含 `rgb/` 子目录的场景目录，而不是 `rgb/` 目录本身。
 
 ### COCO标注格式
 ```json

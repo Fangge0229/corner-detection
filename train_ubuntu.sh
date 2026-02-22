@@ -71,14 +71,27 @@ if [ ! -f "$SCENE_DIR/scene_gt_coco.json" ]; then
     exit 1
 fi
 
-# SCENE_DIR 指向 rgb 目录，检查图像文件是否存在
-IMAGE_COUNT=$(ls "$SCENE_DIR"/*.png 2>/dev/null | wc -l)
-if [ "$IMAGE_COUNT" -eq 0 ]; then
-    echo "错误: RGB图像目录中没有找到PNG文件: $SCENE_DIR"
+# 检查RGB目录和图像文件
+RGB_DIR="$SCENE_DIR/rgb"
+if [ ! -d "$RGB_DIR" ]; then
+    echo "错误: RGB图像目录不存在: $RGB_DIR"
     exit 1
 fi
+
+# 检查图像文件（支持PNG和JPG格式）
+PNG_COUNT=$(ls "$RGB_DIR"/*.png 2>/dev/null | wc -l)
+JPG_COUNT=$(ls "$RGB_DIR"/*.jpg 2>/dev/null | wc -l)
+TOTAL_IMAGES=$((PNG_COUNT + JPG_COUNT))
+
+if [ "$TOTAL_IMAGES" -eq 0 ]; then
+    echo "错误: RGB图像目录中没有找到PNG或JPG文件: $RGB_DIR"
+    exit 1
+fi
+
 echo "数据集信息:"
-echo "  图像数量: $IMAGE_COUNT"
+echo "  PNG图像数量: $PNG_COUNT"
+echo "  JPG图像数量: $JPG_COUNT"
+echo "  总图像数量: $TOTAL_IMAGES"
 
 # 检查Python环境
 echo "检查Python环境..."

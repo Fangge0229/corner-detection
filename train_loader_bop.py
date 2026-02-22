@@ -122,9 +122,9 @@ class BOPCornerDataset(Dataset):
         # 提取角点坐标 (假设keypoints字段存在)
         corners = []
         for ann in anns:
-            # 注意: 忽略ignore字段的检查，假设所有标注都是有效的
-            # if ann.get('ignore', False):
-            #     continue
+            # 跳过被忽略的标注
+            if ann.get('ignore', False):
+                continue
 
             if 'keypoints' in ann:
                 # keypoints格式: [x1,y1,v1, x2,y2,v2, ...]
@@ -140,9 +140,9 @@ class BOPCornerDataset(Dataset):
         # 如果没有keypoints，尝试从bbox计算角点
         if not corners and anns:
             for ann in anns:
-                # 注意: 忽略ignore字段的检查，假设所有标注都是有效的
-                # if ann.get('ignore', False):
-                #     continue
+                # 跳过被忽略的标注
+                if ann.get('ignore', False):
+                    continue
 
                 if 'bbox' in ann:
                     x, y, w, h = ann['bbox']
@@ -171,7 +171,6 @@ class BOPCornerDataset(Dataset):
         return {
             'image': image,
             'heatmap': torch.from_numpy(heatmap).unsqueeze(0),  # 添加通道维度
-            'corners': corners,  # 保留原始角点坐标用于调试
             'image_id': img_id,
             'image_path': img_path
         }

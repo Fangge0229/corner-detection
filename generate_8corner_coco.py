@@ -2,25 +2,18 @@
 """
 从3D模型和pose信息生成8角点标注
 用于BOP格式的角点检测训练数据
-
-依赖: numpy, opencv-python
 """
 import os
 import json
 import numpy as np
 import argparse
 from collections import Counter
+from PIL import Image
 
 
 def load_ply_corners(model_path):
     """
     从PLY模型文件加载并计算其8个角点（axis-aligned bounding box）
-    
-    Args:
-        model_path: .ply模型文件路径
-        
-    Returns:
-        corners_3d: 8个3D角点坐标 (8, 3)
     """
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"模型文件不存在: {model_path}")
@@ -64,15 +57,6 @@ def load_ply_corners(model_path):
 def project_corners_to_2d(corners_3d, R, t, K):
     """
     将3D角点投影到2D图像平面
-    
-    Args:
-        corners_3d: 8个3D角点 (8, 3)
-        R: 旋转矩阵 (3, 3)
-        t: 平移向量 (3,)
-        K: 相机内参 (3, 3)
-        
-    Returns:
-        corners_2d: 8个2D角点 (8, 2)
     """
     corners_3d_hom = np.hstack([corners_3d, np.ones((corners_3d.shape[0], 1))])
     
@@ -89,20 +73,16 @@ def project_corners_to_2d(corners_3d, R, t, K):
     return corners_2d
 
 
-def load_camera_params(camera_path):
+def get_image_size(rgb_dir, img_id):
     """
-    加载相机内参
+    从图像文件获取尺寸
     """
-    with open(camera_path, 'r') as f:
-        camera_data = json.load(f)
-    
-    cam_params = list(camera_data.values())[0]
-    
-    K = np.array(cam_params['cam_K'], dtype=np.float32).reshape(3, 3)
-    width = cam_params['width']
-    height = cam_params['height']
-    
-    return K, width, height
+    files = sorted(os.listdir(rgb_dir))
+    if img_id < len(files):
+        img_path = os.path.join(rgb_dir, files[img_id])
+        with Image.open(img_path) as img:
+            return img.width, img.height
+    return None, None
 
 
 def generate_8corner_coco(scene_dir, models_dir, output_path=None):
@@ -112,13 +92,23 @@ def generate_8corner_coco(scene_dir, models_dir, output_path=None):
     scene_gt_path = os.path.join(scene_dir, 'scene_gt.json')
     scene_coco_path = os.path.join(scene_dir, 'scene_gt_coco.json')
     scene_camera_path = os.path.join(scene_dir, 'scene_camera.json')
+    rgb_dir = os.path.join(scene_dir, 'rgb')
     
     with open(scene_gt_path, 'r') as f:
         scene_gt = json.load(f)
     
-    K, width, height = load_camera_params(scene_camera_path)
+    with open(scene_camera_path, 'r') as f:
+        scene_camera = json.load(f)
+    
+    first_cam = list(scene_camera.values())[0]
+    K = np.array(first_cam['cam_K'], dtype=np.float32).reshape(3, 3)
     print(f"相机内参:\n{K}")
-    print(f"图像尺寸: {width} x {height}")
+    
+    width, height = get_image_size(rgb_dir, 0)
+    if width and height:
+        print(f"图像尺寸: {width} x {height}")
+    else:
+        print("警告: 无法获取图像尺寸")
     
     model_path = os.path.join(models_dir, 'obj_000001.ply')
     model_corners_3d = load_ply_corners(model_path)
@@ -133,10 +123,12 @@ def generate_8corner_coco(scene_dir, models_dir, output_path=None):
     for img_id, anns in scene_gt.items():
         img_id = int(img_id)
         
-        rgb_dir = os.path.join(scene_dir, 'rgb')
         files = sorted(os.listdir(rgb_dir))
         if img_id < len(files):
             file_name = files[img_id]
+            img_path = os.path.join(rgb_dir, file_name)
+            with Image.open(img_path) as img:
+                width, height = img.width, img.height
         else:
             file_name = f"{img_id:06d}.jpg"
         

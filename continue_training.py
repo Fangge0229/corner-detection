@@ -21,9 +21,9 @@ def continue_training(checkpoint_path, num_epochs=100, batch_size=8, learning_ra
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    # 加载数据集
+    # 加载数据集 - 8角点数据
     train_dataset = BOPCornerDataset(
-        '/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000',
+        '/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000',
         transform=transform
     )
 

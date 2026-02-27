@@ -14,23 +14,51 @@ from PIL import Image
 def load_ply_corners(model_path):
     """
     从PLY模型文件加载并计算其8个角点（axis-aligned bounding box）
+    支持ASCII和二进制格式的PLY文件
     """
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"模型文件不存在: {model_path}")
     
     vertices = []
-    with open(model_path, 'r') as f:
-        in_vertex_section = False
+    
+    with open(model_path, 'rb') as f:
+        header_lines = []
+        vertex_count = 0
+        
+        # 读取header
         for line in f:
-            line = line.strip()
-            if line == 'end_header':
-                in_vertex_section = False
+            line = line.decode('utf-8').strip()
+            header_lines.append(line)
+            
+            if line.startswith('element vertex'):
+                vertex_count = int(line.split()[-1])
+            elif line == 'end_header':
                 break
-            if in_vertex_section:
+        
+        # 判断是否是ASCII格式
+        is_ascii = any('ascii' in line.lower() for line in header_lines)
+        
+        if is_ascii:
+            # ASCII格式 - 读取剩余内容
+            content = f.read().decode('utf-8')
+            for line in content.strip().split('\n'):
                 parts = line.split()
-                vertices.append([float(parts[0]), float(parts[1]), float(parts[2])])
-            if line == 'vertex':
-                in_vertex_section = True
+                if len(parts) >= 3:
+                    try:
+                        vertices.append([float(parts[0]), float(parts[1]), float(parts[2])])
+                    except:
+                        pass
+        else:
+            # 二进制格式
+            import struct
+            for _ in range(vertex_count):
+                data = f.read(12)  # 3 floats = 12 bytes
+                if len(data) == 12:
+                    x, y, z = struct.unpack('fff', data)
+                    vertices.append([x, y, z])
+    
+    if not vertices:
+        raise ValueError(f"无法从模型中读取顶点: {model_path}")
     
     vertices = np.array(vertices, dtype=np.float32)
     
@@ -49,6 +77,7 @@ def load_ply_corners(model_path):
     ], dtype=np.float32)
     
     print(f"3D模型角点 (mm):")
+    print(f"  顶点数: {len(vertices)}")
     print(f"  Bounding box: min={min_coords}, max={max_coords}")
     
     return corners_3d

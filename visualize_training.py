@@ -100,15 +100,16 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
         row[0].axis('off')
 
         # 列2：Ground Truth 热图
-        im1 = row[1].imshow(heatmap_gt, cmap='hot', vmin=0, vmax=1)
-        row[1].set_title(f'Ground Truth 热图\n(Max: {heatmap_gt.max():.4f})', 
+        # 使用jet colormap更能突出峰值位置
+        im1 = row[1].imshow(heatmap_gt, cmap='jet', vmin=0, vmax=1)
+        row[1].set_title(f'Ground Truth 热图\n(Max: {heatmap_gt.max():.4f}, Sum: {heatmap_gt.sum():.2f})', 
                          fontsize=12, fontweight='bold')
         row[1].axis('off')
         plt.colorbar(im1, ax=row[1], fraction=0.046, pad=0.04)
 
         # 列3：预测热图
-        im2 = row[2].imshow(heatmap_pred, cmap='hot', vmin=0, vmax=1)
-        row[2].set_title(f'预测热图\n(Max: {heatmap_pred.max():.4f})', 
+        im2 = row[2].imshow(heatmap_pred, cmap='jet', vmin=0, vmax=1)
+        row[2].set_title(f'预测热图\n(Max: {heatmap_pred.max():.4f}, Sum: {heatmap_pred.sum():.2f})', 
                          fontsize=12, fontweight='bold')
         row[2].axis('off')
         plt.colorbar(im2, ax=row[2], fraction=0.046, pad=0.04)
@@ -133,7 +134,7 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
 def main():
     parser = argparse.ArgumentParser(description='训练数据热图可视化')
     parser.add_argument('--scene_dir', type=str,
-                       default='/nas2/home/qianqian/projects/corner_detection/demo-bin-picking/train_pbr/000000',
+                       default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000',
                        help='训练数据目录路径')
     parser.add_argument('--model_path', type=str,
                        default='./corner_detection_model_retrained.pth',

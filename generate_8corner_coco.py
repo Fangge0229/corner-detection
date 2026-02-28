@@ -16,6 +16,7 @@ from PIL import Image
 def load_ply_corners(model_path):
     """
     从PLY模型文件加载并计算其8个角点（axis-aligned bounding box）
+    使用鲁棒方法排除异常值
     """
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"模型文件不存在: {model_path}")
@@ -59,8 +60,37 @@ def load_ply_corners(model_path):
     
     vertices = np.array(vertices, dtype=np.float32)
     
-    min_coords = vertices.min(axis=0)
-    max_coords = vertices.max(axis=0)
+    # 鲁棒的bounding box计算 - 使用percentile排除异常值
+    # 假设正常物体尺寸在10mm到1000mm之间
+    min_coords_raw = vertices.min(axis=0)
+    max_coords_raw = vertices.max(axis=0)
+    size_raw = max_coords_raw - min_coords_raw
+    
+    # 如果某个轴的尺寸异常大（>10米），使用percentile方法
+    max_valid_size = 10000  # 10米
+    if np.any(size_raw > max_valid_size):
+        print(f"⚠️ 检测到异常大的bounding box: {size_raw}")
+        print(f"  使用percentile方法排除异常值...")
+        
+        # 使用1%和99% percentile来排除极端异常值
+        min_coords = np.percentile(vertices, 1, axis=0)
+        max_coords = np.percentile(vertices, 99, axis=0)
+        
+        # 进一步过滤：只保留在合理范围内的顶点
+        valid_mask = np.all((vertices >= min_coords) & (vertices <= max_coords), axis=1)
+        valid_vertices = vertices[valid_mask]
+        
+        if len(valid_vertices) > 0:
+            min_coords = valid_vertices.min(axis=0)
+            max_coords = valid_vertices.max(axis=0)
+            print(f"  过滤后顶点数: {len(valid_vertices)}/{len(vertices)}")
+        else:
+            # 如果过滤后没有顶点，使用原始数据
+            min_coords = min_coords_raw
+            max_coords = max_coords_raw
+    else:
+        min_coords = min_coords_raw
+        max_coords = max_coords_raw
     
     corners_3d = np.array([
         [min_coords[0], min_coords[1], min_coords[2]],
@@ -73,9 +103,12 @@ def load_ply_corners(model_path):
         [max_coords[0], max_coords[1], max_coords[2]],
     ], dtype=np.float32)
     
+    size = max_coords - min_coords
     print(f"3D模型角点 (mm):")
     print(f"  顶点数: {len(vertices)}")
-    print(f"  Bounding box: min={min_coords}, max={max_coords}")
+    print(f"  Bounding box: min=[{min_coords[0]:.2f}, {min_coords[1]:.2f}, {min_coords[2]:.2f}]")
+    print(f"  Bounding box: max=[{max_coords[0]:.2f}, {max_coords[1]:.2f}, {max_coords[2]:.2f}]")
+    print(f"  尺寸: [{size[0]:.2f}, {size[1]:.2f}, {size[2]:.2f}]")
     
     return corners_3d
 

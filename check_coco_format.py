@@ -72,6 +72,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         coco_path = sys.argv[1]
     else:
-        coco_path = '/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000/scene_gt_coco.json'
+        coco_path = '/nas2/home/qianqian/projects/HCCEPose/demo-bin-picking/train_pbr/000000/scene_gt_coco.json'
     
     check_coco_format(coco_path)

@@ -285,10 +285,10 @@ def generate_8corner_coco(scene_dir, models_dir, output_path=None):
 def main():
     parser = argparse.ArgumentParser(description='生成8角点COCO标注')
     parser.add_argument('--scene_dir', type=str,
-                        default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000',
+                        default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-picking/train_pbr/000000',
                         help='场景目录')
     parser.add_argument('--models_dir', type=str,
-                        default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/models',
+                        default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-picking/models',
                         help='models目录')
     parser.add_argument('--output', type=str, default=None,
                         help='输出COCO JSON路径')

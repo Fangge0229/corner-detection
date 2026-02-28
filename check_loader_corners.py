@@ -62,6 +62,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         scene_dir = sys.argv[1]
     else:
-        scene_dir = '/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000'
+        scene_dir = '/nas2/home/qianqian/projects/HCCEPose/demo-bin-picking/train_pbr/000000'
     
     check_loader_corners(scene_dir)

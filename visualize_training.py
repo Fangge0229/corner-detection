@@ -162,7 +162,7 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
 def main():
     parser = argparse.ArgumentParser(description='训练数据热图可视化')
     parser.add_argument('--scene_dir', type=str,
-                       default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000',
+                       default='/nas2/home/qianqian/projects/HCCEPose/demo-bin-picking/train_pbr/000000',
                        help='训练数据目录路径')
     parser.add_argument('--model_path', type=str,
                        default='./corner_detection_model_retrained.pth',

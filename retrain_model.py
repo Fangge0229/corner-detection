@@ -25,7 +25,7 @@ def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
 
     # 加载数据集 - 8角点数据
     train_dataset = BOPCornerDataset(
-        '/nas2/home/qianqian/projects/HCCEPose/demo-bin-pick-back/train_pbr/000000',
+        '/nas2/home/qianqian/projects/HCCEPose/demo-bin-picking/train_pbr/000000',
         transform=transform
     )
 

@@ -80,9 +80,14 @@ def load_ply_corners(model_path):
     return corners_3d
 
 
-def project_corners_to_2d(corners_3d, R, t, K, width, height):
+def project_corners_to_2d(corners_3d, R, t, K, width, height, keep_all_corners=True):
     """
     将3D角点投影到2D图像平面，并检查可见性
+    
+    Args:
+        keep_all_corners: 如果为True，保留所有8个角点（包括图像外的，标记为不可见）
+                         如果为False，只保留在图像内的角点
+    
     返回：角点坐标列表，可见性列表
     """
     corners_3d_hom = np.hstack([corners_3d, np.ones((corners_3d.shape[0], 1))])
@@ -101,19 +106,27 @@ def project_corners_to_2d(corners_3d, R, t, K, width, height):
     corners_2d = corners_2d_hom[:2, :] / corners_2d_hom[2:, :]
     corners_2d = corners_2d.T
     
-    valid_corners = []
+    all_corners = []
     visibility = []
     
     for i, (x, y) in enumerate(corners_2d):
         # 角点必须在图像范围内且深度有效
-        if valid_depth[i] and 0 <= x < width and 0 <= y < height:
-            valid_corners.append([float(x), float(y)])
-            visibility.append(2)  # 可见
+        in_image = valid_depth[i] and 0 <= x < width and 0 <= y < height
+        
+        if keep_all_corners:
+            # 保留所有角点，但根据可见性设置v值
+            all_corners.append([float(x), float(y)])
+            if in_image:
+                visibility.append(2)  # 可见
+            else:
+                visibility.append(0)  # 不可见/未标注
         else:
-            # 角点在图像外，不添加（这是关键修复）
-            pass
+            # 只保留在图像内的角点
+            if in_image:
+                all_corners.append([float(x), float(y)])
+                visibility.append(2)  # 可见
     
-    return valid_corners, visibility
+    return all_corners, visibility
 
 
 def get_image_files(rgb_dir):
@@ -199,15 +212,16 @@ def generate_8corner_coco(scene_dir, models_dir, output_path=None):
             t = np.array(ann['cam_t_m2c'], dtype=np.float32)
             
             corners_2d, visibility = project_corners_to_2d(
-                model_corners_3d, R, t, K, width, height
+                model_corners_3d, R, t, K, width, height, keep_all_corners=True
             )
             
-            if corners_2d:  # 只添加有效的（可见的）角点
-                all_corners.extend(corners_2d)
-                all_visibility.extend(visibility)
+            # 添加所有8个角点（包括不可见的）
+            all_corners.extend(corners_2d)
+            all_visibility.extend(visibility)
         
-        # 只有当有至少1个有效角点时才创建标注
-        if len(all_corners) >= 1:
+        # 只有当有至少1个可见角点时才创建标注
+        visible_count = sum(1 for v in all_visibility if v > 0)
+        if visible_count >= 1:
             valid_images += 1
             
             # 转换为keypoints格式

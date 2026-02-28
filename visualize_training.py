@@ -91,12 +91,40 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
             image_input = image.unsqueeze(0).to(device)
             heatmap_pred = model(image_input)
             heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).squeeze(0).cpu().numpy()
+        
+        # 确保预测热图和GT热图尺寸一致
+        if heatmap_pred.shape != heatmap_gt.shape:
+            import torch.nn.functional as F
+            heatmap_pred_tensor = torch.from_numpy(heatmap_pred).unsqueeze(0).unsqueeze(0)
+            heatmap_pred_tensor = F.interpolate(
+                heatmap_pred_tensor, 
+                size=heatmap_gt.shape, 
+                mode='bilinear', 
+                align_corners=False
+            )
+            heatmap_pred = heatmap_pred_tensor.squeeze(0).squeeze(0).numpy()
 
         row = axes[row_idx]
 
-        # 列1：原始图像
+        # 列1：原始图像（叠加角点）
         row[0].imshow(image_np, cmap='gray')
-        row[0].set_title(f'原始图像 (样本 {sample_idx})', fontsize=12, fontweight='bold')
+        
+        # 从heatmap中提取峰值位置（GT角点）
+        from scipy.ndimage import maximum_filter
+        local_max = maximum_filter(heatmap_gt, size=10) == heatmap_gt
+        peaks = np.argwhere((heatmap_gt > 0.3) & local_max)
+        
+        # 在图像上标记角点
+        for (y, x) in peaks:
+            # 将heatmap坐标映射回图像坐标
+            scale_x = image_np.shape[1] / heatmap_gt.shape[1]
+            scale_y = image_np.shape[0] / heatmap_gt.shape[0]
+            img_x = int(x * scale_x)
+            img_y = int(y * scale_y)
+            row[0].plot(img_x, img_y, 'r+', markersize=15, markeredgewidth=2)
+        
+        row[0].set_title(f'原始图像 (样本 {sample_idx})\n检测到 {len(peaks)} 个角点', 
+                         fontsize=12, fontweight='bold')
         row[0].axis('off')
 
         # 列2：Ground Truth 热图

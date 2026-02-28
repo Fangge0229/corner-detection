@@ -131,12 +131,13 @@ class BOPCornerDataset(Dataset):
             if 'keypoints' in ann:
                 # keypoints格式: [x1,y1,v1, x2,y2,v2, ...]
                 keypoints = ann['keypoints']
-                # 提取可见的角点 (v=2表示可见)
+                # 只提取可见的角点 (v=2表示可见, v=0表示不可见/在图像外)
                 visible_corners = []
                 for i in range(0, len(keypoints), 3):
-                    x, y, v = keypoints[i:i+3]
-                    if v > 0:  # 可见或不可见但标注的点
-                        visible_corners.append([x, y])
+                    if i+2 < len(keypoints):
+                        x, y, v = keypoints[i], keypoints[i+1], keypoints[i+2]
+                        if v == 2:  # 只使用可见的角点
+                            visible_corners.append([x, y])
                 corners.extend(visible_corners)
 
         # 如果没有keypoints，尝试从bbox计算角点

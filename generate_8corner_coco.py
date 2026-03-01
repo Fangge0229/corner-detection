@@ -12,9 +12,12 @@ import argparse
 from PIL import Image
 
 
-def load_ply_corners(model_path):
+def load_ply_corners(model_path, model_scale=1.0):
     """
     从PLY模型文件加载并计算其8个角点（axis-aligned bounding box）
+    
+    Args:
+        model_scale: 模型缩放因子（如果模型太小，可以放大）
     """
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"模型文件不存在: {model_path}")
@@ -56,7 +59,7 @@ def load_ply_corners(model_path):
     if not vertices:
         raise ValueError(f"无法从模型中读取顶点: {model_path}")
     
-    vertices = np.array(vertices, dtype=np.float32)
+    vertices = np.array(vertices, dtype=np.float32) * model_scale
     
     # 计算bounding box
     min_coords = vertices.min(axis=0)
@@ -114,9 +117,12 @@ def project_corners_to_2d(corners_3d, R, t, K, width, height):
     return corners_2d.astype(np.float32), visibility
 
 
-def load_all_models(models_dir):
+def load_all_models(models_dir, model_scale=1.0):
     """
     加载所有模型文件
+    
+    Args:
+        model_scale: 模型缩放因子（如果模型太小，可以放大，如10.0表示放大10倍）
     
     返回：
         dict: {obj_id: corners_3d}
@@ -131,7 +137,7 @@ def load_all_models(models_dir):
                 model_path = os.path.join(models_dir, filename)
                 
                 print(f"\n加载模型: {filename}")
-                corners_3d = load_ply_corners(model_path)
+                corners_3d = load_ply_corners(model_path, model_scale=model_scale)
                 models[obj_id] = corners_3d
                 
             except Exception as e:
@@ -140,7 +146,7 @@ def load_all_models(models_dir):
     return models
 
 
-def generate_8corner_coco(scene_dir, models_dir, output_path=None, t_scale=1.0, target_obj_id=None):
+def generate_8corner_coco(scene_dir, models_dir, output_path=None, t_scale=1.0, target_obj_id=None, model_scale=1.0):
     """
     为场景生成8角点COCO标注
     
@@ -173,8 +179,10 @@ def generate_8corner_coco(scene_dir, models_dir, output_path=None, t_scale=1.0, 
     
     # 加载所有模型
     print(f"\n加载3D模型...")
-    models = load_all_models(models_dir)
+    models = load_all_models(models_dir, model_scale=model_scale)
     print(f"\n共加载 {len(models)} 个模型")
+    if model_scale != 1.0:
+        print(f"  (使用模型缩放因子: {model_scale})")
     
     # 获取相机内参（假设所有图像使用相同相机）
     first_cam = list(scene_camera.values())[0]
@@ -320,6 +328,8 @@ if __name__ == '__main__':
                         help='平移向量缩放因子（如果数据是米，设置为1000）')
     parser.add_argument('--target_obj_id', type=int, default=None,
                         help='只处理特定物体ID（默认处理所有物体）')
+    parser.add_argument('--model_scale', type=float, default=1.0,
+                        help='模型缩放因子（如果模型太小，如设置为10.0放大10倍）')
     
     args = parser.parse_args()
     
@@ -328,5 +338,6 @@ if __name__ == '__main__':
         models_dir=args.models_dir,
         output_path=args.output_path,
         t_scale=args.t_scale,
-        target_obj_id=args.target_obj_id
+        target_obj_id=args.target_obj_id,
+        model_scale=args.model_scale
     )

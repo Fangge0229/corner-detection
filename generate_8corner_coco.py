@@ -266,14 +266,14 @@ def generate_8corner_coco(scene_dir, models_dir, output_path=None, t_scale=1.0, 
             # 计算bbox（只使用可见角点）
             visible_corners = [c for c, v in zip(corners_2d, visibility) if v == 2]
             if visible_corners:
-                x_coords = [c[0] for c in visible_corners]
-                y_coords = [c[1] for c in visible_corners]
+                x_coords = [float(c[0]) for c in visible_corners]
+                y_coords = [float(c[1]) for c in visible_corners]
                 bbox_x = min(x_coords)
                 bbox_y = min(y_coords)
                 bbox_w = max(x_coords) - bbox_x
                 bbox_h = max(y_coords) - bbox_y
             else:
-                bbox_x = bbox_y = bbox_w = bbox_h = 0
+                bbox_x = bbox_y = bbox_w = bbox_h = 0.0
             
             coco_data["annotations"].append({
                 "id": annotation_id,

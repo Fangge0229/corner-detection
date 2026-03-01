@@ -39,6 +39,9 @@ python3 visualize_training.py
 ├── retrain_model.py                      # 从头开始训练脚本
 ├── continue_training.py                  # 从检查点继续训练脚本
 ├── visualize_training.py                 # 训练数据效果可视化脚本
+├── generate_8corner_coco.py              # 从BOP格式生成8角点COCO标注
+├── check_coco_format.py                  # 验证COCO格式标注
+├── check_loader_corners.py               # 检查数据加载器加载的角点
 ├── test_model_performance.py             # 模型性能评估脚本
 ├── test_retrained_model.py               # 重新训练模型测试脚本
 ├── debug_heatmap.py                      # 热图调试脚本
@@ -97,6 +100,87 @@ scene_dir/                  # <-- 这个目录路径作为 --scene_dir 参数
 ```
 
 **重要**: `--scene_dir` 参数应该指向包含 `rgb/` 子目录的场景目录，而不是 `rgb/` 目录本身。
+
+## 🎯 生成Ground Truth数据
+
+### 从BOP格式生成8角点标注
+
+如果你的数据是BOP格式（包含 `scene_gt.json` 和3D模型），可以使用以下脚本生成8角点COCO标注：
+
+#### 1. 基本用法（处理所有物体）
+
+```bash
+python3 generate_8corner_coco.py \
+    --scene_dir /path/to/train_pbr/000000 \
+    --models_dir /path/to/models \
+    --output /path/to/output/scene_gt_coco.json
+```
+
+#### 2. 只处理特定物体
+
+```bash
+python3 generate_8corner_coco.py \
+    --scene_dir /path/to/train_pbr/000000 \
+    --models_dir /path/to/models \
+    --obj_id 2 \
+    --output /path/to/output/scene_gt_coco.json
+```
+
+#### 3. 单位转换（如果平移向量是米）
+
+```bash
+python3 generate_8corner_coco.py \
+    --scene_dir /path/to/train_pbr/000000 \
+    --models_dir /path/to/models \
+    --t_scale 1000 \
+    --output /path/to/output/scene_gt_coco.json
+```
+
+**参数说明**:
+- `--scene_dir`: BOP场景目录，包含 `rgb/`, `scene_gt.json`, `scene_camera.json`
+- `--models_dir`: 3D模型目录，包含 `obj_000001.ply`, `obj_000002.ply` 等
+- `--obj_id`: 可选，只处理特定obj_id的物体（默认处理所有）
+- `--t_scale`: 可选，平移向量缩放因子（默认1.0，如果是米则设为1000）
+- `--output`: 输出COCO JSON文件路径（默认覆盖 `scene_dir/scene_gt_coco.json`）
+
+#### 4. 验证生成的标注
+
+```bash
+# 检查COCO格式
+python3 check_coco_format.py --scene_dir /path/to/train_pbr/000000
+
+# 检查数据加载器加载的角点
+python3 check_loader_corners.py --scene_dir /path/to/train_pbr/000000
+
+# 可视化检查
+python3 visualize_training.py --scene_dir /path/to/train_pbr/000000
+```
+
+### 数据准备流程
+
+```
+1. 准备3D模型 (PLY格式)
+   └── models/
+       ├── obj_000001.ply
+       ├── obj_000002.ply
+       └── ...
+
+2. 准备BOP场景数据
+   └── train_pbr/000000/
+       ├── rgb/                    # 渲染的图像
+       ├── scene_gt.json          # 物体姿态
+       ├── scene_camera.json      # 相机参数
+       └── scene_gt_info.json     # 物体信息
+
+3. 生成8角点标注
+   └── python3 generate_8corner_coco.py
+
+4. 验证数据
+   └── python3 check_coco_format.py
+
+5. 开始训练
+   └── python3 retrain_model.py
+```
 
 ### COCO标注格式
 ```json

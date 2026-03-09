@@ -57,7 +57,7 @@ def load_ply_corners(model_path, model_scale=1.0):
                     if is_after_vertex and h == line:
                         parts = line.split()
                         if len(parts) >= 3:
-                            vertex_properties.append(parts[2])
+                            vertex_properties.append(parts[1])
                         break
         
         is_ascii = any('ascii' in line.lower() for line in header_lines)

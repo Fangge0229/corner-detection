@@ -204,6 +204,9 @@ def collate_fn(batch):
     """
     images = []
     heatmaps = []
+    corners_list = []
+    image_ids = []
+    image_paths = []
     for item in batch:
         images.append(item['image'])
         heatmaps.append(item['heatmap'])

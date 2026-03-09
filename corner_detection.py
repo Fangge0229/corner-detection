@@ -75,12 +75,29 @@ class CornerDetectionModel(nn.Module):
 
 
 class criterion(nn.Module):
-    def __init__(self):
+    def __init__(self, pos_weight=100.0):
+        """
+        带权重的MSE损失函数，用于解决热力图中正负样本（前景/背景）极度不平衡的问题。
+        默认将包含角点的高斯响应区域的损失放大 100 倍。
+        """
         super().__init__()
-        self.mse_loss = nn.MSELoss()
+        self.pos_weight = pos_weight
     
-    def forward(self, output, target):
-        return self.mse_loss(output, target)
+    def forward(self, pred, gt):
+        # pred 和 gt 的 shape 为 (B, 8, 256, 256)
+        # 用阈值区分出包含有效角点高斯分布的“正区域”
+        pos_mask = gt > 0.05
+        neg_mask = ~pos_mask
+        
+        # 计算 MSE 矩阵
+        mse = (pred - gt) ** 2
+        
+        # 对正区域赋予极高的惩罚权重，迫使模型学习去预测这些稀疏的峰值
+        weight = torch.ones_like(gt)
+        weight[pos_mask] = self.pos_weight
+        
+        loss = (mse * weight).mean()
+        return loss
 
 # 使用示例
 if __name__ == "__main__":

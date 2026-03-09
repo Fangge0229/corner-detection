@@ -123,7 +123,7 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
         pred_sum = heatmap_pred.sum()
         print(f"样本 {sample_idx}:")
         print(f"  GT热图：最大值={heatmap_gt.max():.4f}, 总和={gt_sum:.2f}, 非零像素={np.count_nonzero(heatmap_gt > 0.1)}")
-        print(f"  预测：最大值={heatmap_pred.max():.4f}, 总和={pred_sum:.2f}, 非零像素={np.count_nonzero(heatmap_pred > 0.1)}")
+        print(f"  预测：最大值={heatmap_pred.max():.4f}, 总和={pred_sum:.2f}, 响应像素(>0.05)={np.count_nonzero(heatmap_pred > 0.05)}")
         print()
 
     plt.tight_layout()

@@ -56,7 +56,7 @@ class upsampling(nn.Module):
         self.upsample = nn.Upsample(size=(H,W),mode='bicubic',align_corners=True)
     
     def forward(self, x):
-        return self.upsample(x)
+        return torch.sigmoid(self.upsample(x))
 
 
 class CornerDetectionModel(nn.Module):
@@ -80,7 +80,7 @@ class criterion(nn.Module):
         self.mse_loss = nn.MSELoss()
     
     def forward(self, output, target):
-        return self.mse_loss(torch.sigmoid(output), target)
+        return self.mse_loss(output, target)
 
 # 使用示例
 if __name__ == "__main__":

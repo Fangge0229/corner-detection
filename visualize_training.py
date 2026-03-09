@@ -94,7 +94,7 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
             image_input = image.unsqueeze(0).to(device)
             heatmap_pred = model(image_input)
             # 输出形状 (1, 8, 256, 256)
-            heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).cpu().numpy()
+            heatmap_pred = heatmap_pred.squeeze(0).cpu().numpy()
             heatmap_pred_show = np.max(heatmap_pred, axis=0)
 
         row = axes[row_idx]

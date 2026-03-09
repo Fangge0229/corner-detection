@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import os
 import time
-from corner_detection import CornerDetectionModel
+from corner_detection import CornerDetectionModel, criterion
 from train_loader_bop import BOPCornerDataset, collate_fn
 
 def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
@@ -39,7 +39,7 @@ def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
     model = model.to(device)
 
     # 损失函数和优化器
-    criterion = nn.BCEWithLogitsLoss()
+    loss_fn = criterion().to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     print(f"开始训练，使用设备: {device}")
@@ -63,7 +63,7 @@ def train_model(num_epochs=50, batch_size=8, learning_rate=1e-4):
             outputs = model(images)
 
             # 计算损失
-            loss = criterion(outputs, targets)
+            loss = loss_fn(outputs, targets)
 
             # 反向传播
             loss.backward()

@@ -34,7 +34,7 @@ for idx in valid_indices:
     with torch.no_grad():
         image_input = image.unsqueeze(0)
         heatmap_pred = model(image_input)
-        heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).squeeze(0).cpu()
+        heatmap_pred = heatmap_pred.squeeze(0).cpu()
 
     # 从真实热图中估算角点数量
     gt_corners = (heatmap_gt > 0.5).sum().item()

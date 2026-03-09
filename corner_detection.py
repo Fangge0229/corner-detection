@@ -34,7 +34,8 @@ class taskhead(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels=256,out_channels=128,kernel_size=3,stride=1,padding=0)
         self.relu = nn.ReLU()
-        self.conv2 = nn.Conv2d(in_channels=128,out_channels=1,kernel_size=3,stride=1,padding=0)
+        # 产生8个通道的角点预测热图
+        self.conv2 = nn.Conv2d(in_channels=128,out_channels=8,kernel_size=3,stride=1,padding=0)
 
         nn.init.normal_(self.conv1.weight,std=0.01,mean=0.0)
         nn.init.constant_(self.conv1.bias,0)
@@ -76,10 +77,10 @@ class CornerDetectionModel(nn.Module):
 class criterion(nn.Module):
     def __init__(self):
         super().__init__()
-        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.mse_loss = nn.MSELoss()
     
     def forward(self, output, target):
-        return self.bce_loss(output, target)
+        return self.mse_loss(torch.sigmoid(output), target)
 
 # 使用示例
 if __name__ == "__main__":

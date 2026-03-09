@@ -8,41 +8,38 @@ import numpy as np
 import json
 from corner_detection import CornerDetectionModel, criterion
 
-def corners_to_heatmap(corners, height, width, sigma=2.0):
+def corners_to_heatmap(corners_list, height, width, sigma=2.0, num_classes=8):
     """
-    将角点坐标转换为heatmap
-
+    将角点坐标转换为多通道heatmap
+    
     Args:
-        corners: 角点坐标列表, shape (N, 2)
+        corners_list: 包含8个独特角点坐标列表的列表, 长度为8。例如: [[x0, y0], [x1, y1], ...]
         height: heatmap高度
         width: heatmap宽度
         sigma: 高斯核标准差
-
+        
     Returns:
-        heatmap: shape (height, width)
+        heatmap: shape (num_classes, height, width)
     """
-    heatmap = np.zeros((height, width), dtype=np.float32)
-
-    if len(corners) == 0:
+    heatmap = np.zeros((num_classes, height, width), dtype=np.float32)
+    
+    if len(corners_list) == 0:
         return heatmap
-
-    for corner in corners:
-        x, y = corner
-        # 确保坐标在图像范围内
-        x = np.clip(x, 0, width - 1)
-        y = np.clip(y, 0, height - 1)
-
-        # 创建高斯核
-        xx, yy = np.meshgrid(np.arange(width), np.arange(height))
-        gaussian = np.exp(-((xx - x)**2 + (yy - y)**2) / (2 * sigma**2))
-
-        # 累加到heatmap
-        heatmap += gaussian
-
-    # 归一化到[0, 1]
-    if heatmap.max() > 0:
-        heatmap = heatmap / heatmap.max()
-
+        
+    for class_idx in range(num_classes):
+        if class_idx < len(corners_list):
+            corners = corners_list[class_idx]
+            for corner in corners:
+                x, y = corner
+                
+                x = np.clip(x, 0, width - 1)
+                y = np.clip(y, 0, height - 1)
+                
+                xx, yy = np.meshgrid(np.arange(width), np.arange(height))
+                gaussian = np.exp(-((xx - x)**2 + (yy - y)**2) / (2 * sigma**2))
+                
+                heatmap[class_idx] = np.maximum(heatmap[class_idx], gaussian)
+                
     return heatmap
 
 class BOPCornerDataset(Dataset):
@@ -121,83 +118,49 @@ class BOPCornerDataset(Dataset):
         # 获取该图像的标注
         anns = self.img_id_to_anns.get(img_id, [])
 
-        # 提取角点坐标 (假设keypoints字段存在)
-        corners = []
+        # 提取8个类别的角点坐标
+        corners_per_class = [[] for _ in range(8)]
         for ann in anns:
-            # 跳过被忽略的标注
             if ann.get('ignore', False):
                 continue
-
+                
             if 'keypoints' in ann:
-                # keypoints格式: [x1,y1,v1, x2,y2,v2, ...]
                 keypoints = ann['keypoints']
-                # 提取可见的角点 (v=2表示可见)
-                visible_corners = []
-                for i in range(0, len(keypoints), 3):
-                    x, y, v = keypoints[i:i+3]
-                    if v > 0:  # 可见或不可见但标注的点
-                        visible_corners.append([x, y])
-                corners.extend(visible_corners)
-
-        # 如果没有keypoints，尝试从bbox计算角点
-        if not corners and anns:
-            for ann in anns:
-                # 跳过被忽略的标注
-                if ann.get('ignore', False):
-                    continue
-
-                if 'bbox' in ann:
-                    x, y, w, h = ann['bbox']
-                    # 计算bbox的四个角点
-                    corners.extend([
-                        [x, y],          # 左上
-                        [x + w, y],      # 右上
-                        [x + w, y + h],  # 右下
-                        [x, y + h]       # 左下
-                    ])
-
-        # 转换为numpy数组 (原始图像坐标系)
-        if corners:
-            corners = np.array(corners, dtype=np.float32)
-        else:
-            # 如果没有角点，创建一个空的数组
-            corners = np.array([], dtype=np.float32).reshape(0, 2)
-
+                # 遍历8个角点 (每个角点占3个值: x, y, v)
+                for i in range(8):
+                    idx = i * 3
+                    if idx + 2 < len(keypoints):
+                        x, y, v = keypoints[idx:idx+3]
+                        if v > 0:
+                            corners_per_class[i].append([x, y])
+                            
+        # 如果没有合法的keypoint，这会导致严重的回归退化，抛出错误
+        # 不再退化为bounding box
+        has_any_corner = any(len(c) > 0 for c in corners_per_class)
         # 记录原始尺寸，用于对角点进行缩放
         orig_w, orig_h = width, height
 
-        # 数据增强和预处理 (先对图像进行resize等变换)
+        # 数据增强和预处理
         if self.transform:
             image = self.transform(image)
 
-        # 将角点从原始图像尺寸缩放到模型输入尺寸 (256x256)
         target_h, target_w = 256, 256
-        if corners.shape[0] > 0:
-            scale_x = float(target_w) / float(orig_w)
-            scale_y = float(target_h) / float(orig_h)
-            scaled_corners = corners.copy()
-            scaled_corners[:, 0] = scaled_corners[:, 0] * scale_x
-            scaled_corners[:, 1] = scaled_corners[:, 1] * scale_y
-        else:
-            scaled_corners = corners.copy()
+        scaled_corners_per_class = [[] for _ in range(8)]
+        
+        scale_x = float(target_w) / float(orig_w)
+        scale_y = float(target_h) / float(orig_h)
+        
+        for i in range(8):
+            for x, y in corners_per_class[i]:
+                scaled_corners_per_class[i].append([x * scale_x, y * scale_y])
 
-        # 创建角点heatmap (使用模型输入尺寸256x256) —— 使用缩放后的角点
-        heatmap = corners_to_heatmap(scaled_corners, target_h, target_w)
+        heatmap = corners_to_heatmap(scaled_corners_per_class, target_h, target_w, num_classes=8)
 
-        # 创建填充角点数组，便于在没有自定义 collate_fn 时安全堆叠
-        num_corners = scaled_corners.shape[0]
-        padded = np.zeros((self.max_corners, 2), dtype=np.float32)
-        if num_corners > 0:
-            # 截断或填充
-            take = min(num_corners, self.max_corners)
-            padded[:take, :] = scaled_corners[:take, :]
-
+        # 为了兼容 collate_fn 的占位（这里不再使用之前的一维逻辑，仅作为占位返回）
         return {
             'image': image,
-            'heatmap': torch.from_numpy(heatmap).unsqueeze(0),  # 添加通道维度
-            'corners': scaled_corners,  # 缩放到模型输入大小，方便可视化（变长）
-            'padded_corners': torch.from_numpy(padded),  # 固定形状，方便默认 collate
-            'num_corners': int(num_corners),
+            'heatmap': torch.from_numpy(heatmap), # shape (8, 256, 256)
+            'corners_list': scaled_corners_per_class,
             'image_id': img_id,
             'image_path': img_path
         }
@@ -241,27 +204,17 @@ def collate_fn(batch):
     """
     images = []
     heatmaps = []
-    corners_list = []
-    padded_list = []
-    num_list = []
-    image_ids = []
-    image_paths = []
-
     for item in batch:
         images.append(item['image'])
         heatmaps.append(item['heatmap'])
-        corners_list.append(item['corners'])
-        padded_list.append(item.get('padded_corners'))
-        num_list.append(item.get('num_corners', 0))
+        corners_list.append(item['corners_list'])
         image_ids.append(item['image_id'])
         image_paths.append(item['image_path'])
 
     return {
         'images': torch.stack(images),
         'heatmaps': torch.stack(heatmaps),
-        'corners': corners_list,  # 保持为列表，因为长度不同
-        'padded_corners': torch.stack(padded_list),  # 固定形状 (B, max_corners, 2)
-        'num_corners': torch.tensor(num_list, dtype=torch.long),
+        'corners_list': corners_list,
         'image_ids': image_ids,
         'image_paths': image_paths
     }

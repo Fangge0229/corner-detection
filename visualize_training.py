@@ -57,9 +57,11 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
     
     for idx in range(len(dataset)):
         data_dict = dataset[idx]
-        heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()
+        heatmap_gt = data_dict['heatmap'].numpy() # shape: (8, 256, 256)
+        # 用最大强度投影合成为一个通道进行可视化
+        heatmap_gt_show = np.max(heatmap_gt, axis=0) 
         
-        if heatmap_gt.max() > 0:
+        if heatmap_gt_show.max() > 0:
             valid_samples.append(idx)
             if len(valid_samples) >= num_samples:
                 break
@@ -78,7 +80,8 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
     for row_idx, sample_idx in enumerate(valid_samples):
         data_dict = dataset[sample_idx]
         image = data_dict['image']
-        heatmap_gt = data_dict['heatmap'].squeeze(0).numpy()
+        heatmap_gt = data_dict['heatmap'].numpy()
+        heatmap_gt_show = np.max(heatmap_gt, axis=0)
 
         # 反标准化图像
         image_np = image.permute(1, 2, 0).numpy()
@@ -90,7 +93,9 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
         with torch.no_grad():
             image_input = image.unsqueeze(0).to(device)
             heatmap_pred = model(image_input)
-            heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).squeeze(0).cpu().numpy()
+            # 输出形状 (1, 8, 256, 256)
+            heatmap_pred = torch.sigmoid(heatmap_pred).squeeze(0).cpu().numpy()
+            heatmap_pred_show = np.max(heatmap_pred, axis=0)
 
         row = axes[row_idx]
 
@@ -100,15 +105,15 @@ def visualize_heatmaps(model, device, dataset, num_samples=5, save_dir=None):
         row[0].axis('off')
 
         # 列2：Ground Truth 热图
-        im1 = row[1].imshow(heatmap_gt, cmap='hot', vmin=0, vmax=1)
-        row[1].set_title(f'Ground Truth 热图\n(Max: {heatmap_gt.max():.4f})', 
+        im1 = row[1].imshow(heatmap_gt_show, cmap='hot', vmin=0, vmax=1)
+        row[1].set_title(f'Ground Truth 热图\n(Max: {heatmap_gt_show.max():.4f})', 
                          fontsize=12, fontweight='bold')
         row[1].axis('off')
         plt.colorbar(im1, ax=row[1], fraction=0.046, pad=0.04)
 
         # 列3：预测热图
-        im2 = row[2].imshow(heatmap_pred, cmap='hot', vmin=0, vmax=1)
-        row[2].set_title(f'预测热图\n(Max: {heatmap_pred.max():.4f})', 
+        im2 = row[2].imshow(heatmap_pred_show, cmap='hot', vmin=0, vmax=1)
+        row[2].set_title(f'预测热图\n(Max: {heatmap_pred_show.max():.4f})', 
                          fontsize=12, fontweight='bold')
         row[2].axis('off')
         plt.colorbar(im2, ax=row[2], fraction=0.046, pad=0.04)
